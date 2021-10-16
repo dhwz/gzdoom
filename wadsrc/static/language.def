@@ -99,6 +99,9 @@ STARTUP3 = "";
 STARTUP4 = "";
 STARTUP5 = "";
 
+// Engine strings
+CNTRLMNU_OPEN_MAIN				= "Open Main Menu";
+
 // Placeholder definitions for strings that are in the game content table where the labels are needed even when that file is not loaded.
 
 // Level names
