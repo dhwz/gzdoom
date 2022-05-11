@@ -173,6 +173,7 @@ void FreeSBarInfoScript();
 void I_UpdateWindowTitle();
 void S_ParseMusInfo();
 void D_GrabCVarDefaults();
+void LoadHexFont(const char* filename);
 
 // PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
 
@@ -568,7 +569,6 @@ EXTERN_CVAR(Int, compatmode)
 
 CUSTOM_CVAR (Int, compatflags, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL)
 {
-	if (FBaseCVar::m_inEnable) return;
 	for (auto Level : AllLevels())
 	{
 		Level->ApplyCompatibility();
@@ -577,7 +577,6 @@ CUSTOM_CVAR (Int, compatflags, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL
 
 CUSTOM_CVAR (Int, compatflags2, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCALL)
 {
-	if (FBaseCVar::m_inEnable) return;
 	for (auto Level : AllLevels())
 	{
 		Level->ApplyCompatibility2();
@@ -585,7 +584,7 @@ CUSTOM_CVAR (Int, compatflags2, 0, CVAR_ARCHIVE|CVAR_SERVERINFO | CVAR_NOINITCAL
 	}
 }
 
-CUSTOM_CVAR(Int, compatmode, 0, CVAR_ARCHIVE)
+CUSTOM_CVAR(Int, compatmode, 0, CVAR_ARCHIVE|CVAR_NOINITCALL)
 {
 	int v, w = 0;
 
@@ -1941,7 +1940,7 @@ static void D_DoomInit()
 //
 //==========================================================================
 
-static void AddAutoloadFiles(const char *autoname, TArray<FString> allwads)
+static void AddAutoloadFiles(const char *autoname, TArray<FString>& allwads)
 {
 	LumpFilterIWAD.Format("%s.", autoname);	// The '.' is appened to simplify parsing the string 
 
@@ -2976,7 +2975,7 @@ static FILE* D_GetHashFile()
 //
 //==========================================================================
 
-static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString> allwads)
+static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString>& allwads, TArray<FString>& pwads)
 {
 	gameinfo.gametype = iwad_info->gametype;
 	gameinfo.flags = iwad_info->flags;
@@ -3054,6 +3053,7 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString> allwads)
 		FixMacHexen(fileSystem);
 		FindStrifeTeaserVoices(fileSystem);
 	};
+	allwads.Append(std::move(pwads));
 
 	bool allowduplicates = Args->CheckParm("-allowduplicates");
 	auto hashfile = D_GetHashFile();
@@ -3119,6 +3119,13 @@ static int D_InitGame(const FIWADInfo* iwad_info, TArray<FString> allwads)
 
 	// Base systems have been inited; enable cvar callbacks
 	FBaseCVar::EnableCallbacks ();
+	
+	// +compatmode cannot be used on the command line, so use this as a substitute
+	auto compatmodeval = Args->CheckValue("-compatmode");
+	if (compatmodeval)
+	{
+		compatmode = (int)strtoll(compatmodeval, nullptr, 10);
+	}
 
 	if (!batchrun) Printf ("S_Init: Setting up sound.\n");
 	S_Init ();
@@ -3473,6 +3480,15 @@ static int D_DoomMain_Internal (void)
 	std::set_new_handler(NewFailure);
 	const char *batchout = Args->CheckValue("-errorlog");
 	
+	// [RH] Make sure zdoom.pk3 is always loaded,
+	// as it contains magic stuff we need.
+	wad = BaseFileSearch(BASEWAD, NULL, true, GameConfig);
+	if (wad == NULL)
+	{
+		I_FatalError("Cannot find " BASEWAD);
+	}
+	LoadHexFont(wad);	// load hex font early so we have it during startup.
+
 	C_InitConsole(80*8, 25*8, false);
 	I_DetectOS();
 
@@ -3502,13 +3518,6 @@ static int D_DoomMain_Internal (void)
 	extern void D_ConfirmSendStats();
 	D_ConfirmSendStats();
 
-	// [RH] Make sure zdoom.pk3 is always loaded,
-	// as it contains magic stuff we need.
-	wad = BaseFileSearch (BASEWAD, NULL, true, GameConfig);
-	if (wad == NULL)
-	{
-		I_FatalError ("Cannot find " BASEWAD);
-	}
 	FString basewad = wad;
 
 	FString optionalwad = BaseFileSearch(OPTIONALWAD, NULL, true, GameConfig);
@@ -3568,10 +3577,9 @@ static int D_DoomMain_Internal (void)
 		{
 			I_FatalError ("You cannot -file with the shareware version. Register!");
 		}
-		allwads.Append(std::move(pwads));
 		lastIWAD = iwad;
 
-		int ret = D_InitGame(iwad_info, allwads);
+		int ret = D_InitGame(iwad_info, allwads, pwads);
 		allwads.Reset();
 		delete iwad_man;	// now we won't need this anymore
 		iwad_man = NULL;
