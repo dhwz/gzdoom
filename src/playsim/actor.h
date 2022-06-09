@@ -427,6 +427,7 @@ enum ActorFlag8
 	MF8_SEEFRIENDLYMONSTERS	= 0X08000000,	// [inkoalawetrust] Hostile monster can see friendly monsters.
 	MF8_CROSSLINECHECK	= 0x10000000,	// [MC]Enables CanCrossLine virtual
 	MF8_MASTERNOSEE		= 0x20000000,	// Don't show object in first person if their master is the current camera.
+	MF8_ADDLIGHTLEVEL	= 0x40000000,	// [MC] Actor light level is additive with sector.
 };
 
 // --- mobj.renderflags ---
@@ -1112,6 +1113,7 @@ public:
 	int16_t			movecount;		// when 0, select a new dir
 
 	int16_t			strafecount;	// for MF3_AVOIDMELEE
+	int16_t			LightLevel;		// Allows for overriding sector light levels.
 	uint16_t			SpawnAngle;
 
 	TObjPtr<AActor*> target;			// thing being chased/attacked (or NULL)
@@ -1280,7 +1282,7 @@ public:
 	bool IsMapActor();
 	int GetTics(FState * newstate);
 	bool SetState (FState *newstate, bool nofunction=false);
-	int UpdateWaterDepth(bool splash);
+	double UpdateWaterDepth(bool splash);
 	virtual void SplashCheck();
 	virtual bool UpdateWaterLevel (bool splash=true);
 	bool isFast();
@@ -1507,6 +1509,7 @@ public:
 		return max(1., Distance2D(dest) / speed);
 	}
 
+	int GetLightLevel(sector_t* rendersector);
 	int ApplyDamageFactor(FName damagetype, int damage) const;
 	int GetModifiedDamage(FName damagetype, int damage, bool passive, AActor *inflictor, AActor *source, int flags = 0);
 	void DeleteAttachedLights();

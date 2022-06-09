@@ -101,6 +101,8 @@ void HWSprite::DrawSprite(HWDrawInfo *di, FRenderState &state, bool translucent)
 	int rel = fullbright ? 0 : getExtraLight();
 	auto &vp = di->Viewpoint;
 
+	const bool UseActorLight = (actor && actor->LightLevel > -1);
+
 	if (translucent)
 	{
 		// The translucent pass requires special setup for the various modes.
@@ -240,7 +242,6 @@ void HWSprite::DrawSprite(HWDrawInfo *di, FRenderState &state, bool translucent)
 			// set up the light slice
 			secplane_t *topplane = i == 0 ? &topp : &(*lightlist)[i].plane;
 			secplane_t *lowplane = i == (*lightlist).Size() - 1 ? &bottomp : &(*lightlist)[i + 1].plane;
-
 			int thislight = (*lightlist)[i].caster != nullptr ? hw_ClampLight(*(*lightlist)[i].p_lightlevel) : lightlevel;
 			int thisll = actor == nullptr ? thislight : (uint8_t)actor->Sector->CheckSpriteGlow(thislight, actor->InterpolatedPosition(vp.TicFrac));
 
@@ -1002,10 +1003,10 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 	fullbright = (thing->flags5 & MF5_BRIGHT) ||
 		((thing->renderflags & RF_FULLBRIGHT) && (!texture || !texture->isFullbrightDisabled()));
 
-	lightlevel = fullbright ? 255 :
-		hw_ClampLight(rendersector->GetTexture(sector_t::ceiling) == skyflatnum ?
-			rendersector->GetCeilingLight() : rendersector->GetFloorLight());
-	foglevel = (uint8_t)clamp<short>(rendersector->lightlevel, 0, 255);
+	if (fullbright)	lightlevel = 255;
+	else lightlevel = hw_ClampLight(thing->GetLightLevel(rendersector));
+
+	foglevel = (uint8_t)clamp<short>(rendersector->lightlevel, 0, 255); // this *must* use the sector's light level or the fog will just look bad.
 
 	lightlevel = rendersector->CheckSpriteGlow(lightlevel, thingpos);
 
@@ -1218,8 +1219,7 @@ void HWSprite::ProcessParticle (HWDrawInfo *di, particle_t *particle, sector_t *
 {
 	if (particle->alpha==0) return;
 
-	lightlevel = hw_ClampLight(sector->GetTexture(sector_t::ceiling) == skyflatnum ? 
-		sector->GetCeilingLight() : sector->GetFloorLight());
+	lightlevel = hw_ClampLight(sector->GetSpriteLight());
 	foglevel = (uint8_t)clamp<short>(sector->lightlevel, 0, 255);
 
 	if (di->isFullbrightScene()) 
