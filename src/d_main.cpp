@@ -3535,6 +3535,15 @@ static int D_DoomMain_Internal (void)
 	std::set_new_handler(NewFailure);
 	const char *batchout = Args->CheckValue("-errorlog");
 	
+	// [RH] Make sure zdoom.pk3 is always loaded,
+	// as it contains magic stuff we need.
+	wad = BaseFileSearch(BASEWAD, NULL, true, GameConfig);
+	if (wad == NULL)
+	{
+		I_FatalError("Cannot find " BASEWAD);
+	}
+	LoadHexFont(wad);	// load hex font early so we have it during startup.
+
 	C_InitConsole(80*8, 25*8, false);
 	I_DetectOS();
 
@@ -3563,15 +3572,6 @@ static int D_DoomMain_Internal (void)
 
 	extern void D_ConfirmSendStats();
 	D_ConfirmSendStats();
-
-	// [RH] Make sure zdoom.pk3 is always loaded,
-	// as it contains magic stuff we need.
-	wad = BaseFileSearch(BASEWAD, NULL, true, GameConfig);
-	if (wad == NULL)
-	{
-		I_FatalError("Cannot find " BASEWAD);
-	}
-	LoadHexFont(wad);	// load hex font early so we have it during startup.
 
 	FString basewad = wad;
 
