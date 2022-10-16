@@ -324,7 +324,7 @@ public:
 	virtual bool IsEnded()
 	{
 		return !Playing.load();
-			}
+	}
 
 	virtual FString GetStats()
 		{
