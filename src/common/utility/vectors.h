@@ -237,6 +237,12 @@ struct TVector2
 	{
 		return X*X + Y*Y;
 	}
+	
+	double Sum() const
+	{
+		return abs(X) + abs(Y);
+	}
+
 
 	// Return a unit vector facing the same direction as this one
 	TVector2 Unit() const
@@ -268,6 +274,11 @@ struct TVector2
 
 	// Dot product
 	vec_t operator | (const TVector2 &other) const
+	{
+		return X*other.X + Y*other.Y;
+	}
+
+	vec_t dot(const TVector2 &other) const
 	{
 		return X*other.X + Y*other.Y;
 	}
@@ -596,6 +607,12 @@ struct TVector3
 	{
 		return X*X + Y*Y + Z*Z;
 	}
+	
+	double Sum() const
+	{
+		return abs(X) + abs(Y) + abs(Z);
+	}
+
 
 	// Return a unit vector facing the same direction as this one
 	TVector3 Unit() const
@@ -895,6 +912,12 @@ struct TVector4
 	{
 		return X*X + Y*Y + Z*Z + W*W;
 	}
+	
+	double Sum() const
+	{
+		return abs(X) + abs(Y) + abs(Z) + abs(W);
+	}
+	
 
 	// Return a unit vector facing the same direction as this one
 	TVector4 Unit() const
@@ -1307,6 +1330,11 @@ public:
 		return Degrees_ / other;
 	}
 
+	constexpr double operator/ (TAngle other) const
+	{
+		return Degrees_ / other.Degrees_;
+	}
+
 	// Should the comparisons consider an epsilon value?
 	constexpr bool operator< (TAngle other) const
 	{
@@ -1486,27 +1514,15 @@ inline TVector2<T> clamp(const TVector2<T> &vec, const TVector2<T> &min, const T
 }
 
 template<class T>
-inline TVector2<T> interpolatedvec2(const TVector2<T> &ovec, const TVector2<T> &vec, const double scale)
+inline TAngle<T> interpolatedvalue(const TAngle<T> &oang, const TAngle<T> &ang, const double interpfrac)
 {
-	return ovec + ((vec - ovec) * scale);
+	return oang + (deltaangle(oang, ang) * interpfrac);
 }
 
-template<class T>
-inline TVector3<T> interpolatedvec3(const TVector3<T> &ovec, const TVector3<T> &vec, const double scale)
+template <class T>
+inline T interpolatedvalue(const T& oval, const T& val, const double interpfrac)
 {
-	return ovec + ((vec - ovec) * scale);
-}
-
-template<class T>
-inline TVector4<T> interpolatedvec4(const TVector4<T> &ovec, const TVector4<T> &vec, const double scale)
-{
-	return ovec + ((vec - ovec) * scale);
-}
-
-template<class T>
-inline TAngle<T> interpolatedangle(const TAngle<T> &oang, const TAngle<T> &ang, const double scale)
-{
-	return oang + (deltaangle(oang, ang) * scale);
+	return T(oval + (val - oval) * interpfrac);
 }
 
 // Much of this is copied from TVector3. Is all that functionality really appropriate?
@@ -1692,8 +1708,10 @@ typedef TMatrix3x3<double>		DMatrix3x3;
 typedef TAngle<double>			DAngle;
 
 constexpr DAngle nullAngle = DAngle::fromDeg(0.);
+constexpr DAngle minAngle = DAngle::fromDeg(1. / 65536.);
 constexpr FAngle nullFAngle = FAngle::fromDeg(0.);
 
+constexpr DAngle DAngle1 = DAngle::fromDeg(1);
 constexpr DAngle DAngle22_5 = DAngle::fromDeg(22.5);
 constexpr DAngle DAngle45 = DAngle::fromDeg(45);
 constexpr DAngle DAngle60 = DAngle::fromDeg(60);
