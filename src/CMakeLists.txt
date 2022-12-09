@@ -27,6 +27,11 @@ if( APPLE )
     option( OSX_COCOA_BACKEND "Use native Cocoa backend instead of SDL" ON )
 endif()
 
+option( ZDOOM_ENABLE_SWR "Enable software renderer" ON )
+if( NOT ZDOOM_ENABLE_SWR )
+	add_definitions( -DNO_SWRENDERER )
+endif()
+
 target_architecture(TARGET_ARCHITECTURE)
 message(STATUS "Architecture is ${TARGET_ARCHITECTURE}")
 
@@ -37,9 +42,6 @@ endif()
 # Right now only 64 bit is supported.
 if( ${TARGET_ARCHITECTURE} MATCHES "x86_64" )
 	set( X64 64 )
-endif()
-
-if( X64 OR ${TARGET_ARCHITECTURE} MATCHES "i386" )
 	add_definitions( -DARCH_IA32 )
 endif()
 
@@ -48,23 +50,13 @@ if( NOT PROJECT_LIBRARIES )
 endif()
 
 if( WIN32 )
-	if( X64 )
-		set( WIN_TYPE Win64 )
-		set( XBITS x64 )
-	else()
-		set( WIN_TYPE Win32 )
-		set( XBITS x86 )
-	endif()
 
 	add_definitions( -D_WIN32 )
-
-
-	set( DX_dinput8_LIBRARY dinput8 )
 
 	set( PROJECT_LIBRARIES
 		wsock32
 		winmm
-		"${DX_dinput8_LIBRARY}"
+		dinput8
 		ole32
 		user32
 		gdi32
@@ -75,10 +67,6 @@ if( WIN32 )
 		oleaut32
 		dbghelp
 		legacy_stdio_definitions )
-
-	if( NOT DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
-		set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} DelayImp )
-	endif()
 
 	if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
 		if( DX_dxguid_LIBRARY )
@@ -145,11 +133,6 @@ else()
 		set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "${SDL2_LIBRARY}" )
 	endif()
 
-	find_path( FPU_CONTROL_DIR fpu_control.h )
-	if( FPU_CONTROL_DIR )
-		include_directories( ${FPU_CONTROL_DIR} )
-		add_definitions( -DHAVE_FPU_CONTROL )
-	endif()
 endif()
 
 if( NOT NO_OPENAL )
@@ -180,7 +163,6 @@ endif()
 
 if( X64 )
 	set( HAVE_MMX 1 )
-else( X64 )
 endif( X64 )
 
 CHECK_CXX_SOURCE_COMPILES("#include <ppl.h>
@@ -208,7 +190,6 @@ if( DEM_CMAKE_COMPILER_IS_GNUCXX_COMPATIBLE )
 		set( CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -pg" )
 	endif()
 
-	#set( REL_CXX_FLAGS "-fno-rtti" )
 	if( NOT PROFILE AND NOT APPLE )
 		# On OS X frame pointers are required for exception handling, at least with Clang
 		set( REL_CXX_FLAGS "${REL_CXX_FLAGS} -fomit-frame-pointer" )
@@ -333,7 +314,7 @@ add_custom_target( revision_check ALL
 
 set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "${ZLIB_LIBRARIES}" "${JPEG_LIBRARIES}" "${BZIP2_LIBRARIES}" "${CMAKE_DL_LIBS}" "${DRPC_LIBRARIES}")
 if (HAVE_VULKAN)
-	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "glslang" "SPIRV" "OGLCompiler")
+	set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} "zvulkan")
 endif()
 
 # ZMUSIC
@@ -487,9 +468,15 @@ elseif( APPLE )
 	set_source_files_properties( posix/osx/zdoom.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources )
 	set_source_files_properties( common/platform/posix/osx/iwadpicker_cocoa.mm PROPERTIES COMPILE_FLAGS -fobjc-exceptions )
 else()
+	option (SYSTEMINSTALL "Set global progdir based on CMake Install Dir" OFF)
+
 	set( SYSTEM_SOURCES_DIR common/platform/posix common/platform/posix/sdl )
 	set( SYSTEM_SOURCES ${PLAT_POSIX_SOURCES} ${PLAT_SDL_SOURCES} ${PLAT_UNIX_SOURCES} )
 	set( OTHER_SYSTEM_SOURCES ${PLAT_WIN32_SOURCES} ${PLAT_OSX_SOURCES} ${PLAT_COCOA_SOURCES} )
+
+	if ( SYSTEMINSTALL )
+		add_definitions( -DPROGDIR="${CMAKE_INSTALL_PREFIX}/${INSTALL_PK3_PATH}" )
+	endif()
 endif()
 
 if( HAVE_MMX )
@@ -691,7 +678,6 @@ set( NOT_COMPILED_SOURCE_FILES
 	zcc-parse.c
 	zcc-parse.h
 	common/platform/win32/zutil.natvis
-	common/rendering/vulkan/thirdparty/vk_mem_alloc/vk_mem_alloc.natvis
 )
 
 set( VM_JIT_SOURCES
@@ -742,10 +728,7 @@ set( FASTMATH_SOURCES
 	
 #Vulkan stuff must go into a separate list because it needs to be disabled for some platforms
 set (VULKAN_SOURCES
-	common/rendering/vulkan/system/vk_device.cpp
-	common/rendering/vulkan/system/vk_swapchain.cpp
-	common/rendering/vulkan/system/vk_builders.cpp
-	common/rendering/vulkan/system/vk_framebuffer.cpp
+	common/rendering/vulkan/system/vk_renderdevice.cpp
 	common/rendering/vulkan/system/vk_commandbuffer.cpp
 	common/rendering/vulkan/system/vk_hwbuffer.cpp
 	common/rendering/vulkan/system/vk_buffer.cpp
@@ -764,8 +747,7 @@ set (VULKAN_SOURCES
 	common/rendering/vulkan/textures/vk_imagetransition.cpp
 	common/rendering/vulkan/textures/vk_renderbuffers.cpp
 	common/rendering/vulkan/textures/vk_texture.cpp
-	common/rendering/vulkan/thirdparty/volk/volk.c
-	common/rendering/vulkan/thirdparty/vk_mem_alloc/vk_mem_alloc.cpp
+	common/rendering/vulkan/textures/vk_framebuffer.cpp
 )
 
 if (HAVE_GLES2)
@@ -1166,6 +1148,7 @@ set (PCH_SOURCES
 	common/rendering/gl/gl_samplers.cpp
 	common/rendering/gl/gl_shader.cpp
 	common/rendering/gl/gl_shaderprogram.cpp
+	common/scripting/core/maps.cpp
 	common/scripting/core/dictionary.cpp
 	common/scripting/core/dynarrays.cpp
 	common/scripting/core/symbols.cpp
@@ -1282,7 +1265,6 @@ include_directories( .
 	common/rendering/gles
 	common/rendering/gles/glad/include
 	common/rendering/gles/Mali_OpenGL_ES_Emulator/include
-	common/rendering/vulkan/thirdparty
 	common/scripting/vm
 	common/scripting/jit
 	common/scripting/core
@@ -1311,8 +1293,7 @@ include_directories( .
 	scripting/zscript
 	rendering
 	../libraries/gdtoa
-	../libraries/glslang/glslang/Public
-	../libraries/glslang/spirv
+	../libraries/ZVulkan/include
 	${CMAKE_BINARY_DIR}/libraries/gdtoa
 	${SYSTEM_SOURCES_DIR}
 )
@@ -1490,9 +1471,6 @@ source_group("Common\\Rendering\\Vulkan Renderer\\System" REGULAR_EXPRESSION "^$
 source_group("Common\\Rendering\\Vulkan Renderer\\Renderer" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/renderer/.+")
 source_group("Common\\Rendering\\Vulkan Renderer\\Shaders" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/shaders/.+")
 source_group("Common\\Rendering\\Vulkan Renderer\\Textures" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/textures/.+")
-source_group("Common\\Rendering\\Vulkan Renderer\\Third Party" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/thirdparty/.+")
-source_group("Common\\Rendering\\Vulkan Renderer\\Third Party\\Volk" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/thirdparty/volk/.+")
-source_group("Common\\Rendering\\Vulkan Renderer\\Third Party\\Vk_Mem_Alloc" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/rendering/vulkan/thirdparty/vk_mem_alloc.+")
 source_group("Common\\Models" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/models/.+")
 source_group("Common\\Textures" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/textures/.+")
 source_group("Common\\Textures\\Hires" REGULAR_EXPRESSION "^${CMAKE_CURRENT_SOURCE_DIR}/common/textures/hires/.+")
