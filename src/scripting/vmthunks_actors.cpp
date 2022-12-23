@@ -716,6 +716,13 @@ DEFINE_ACTION_FUNCTION_NATIVE(AActor, ClearInterpolation, ClearInterpolation)
 	return 0;
 }
 
+DEFINE_ACTION_FUNCTION(AActor, ClearFOVInterpolation)
+{
+	PARAM_SELF_PROLOGUE(AActor);
+	self->ClearFOVInterpolation();
+	return 0;
+}
+
 static int ApplyDamageFactors(PClassActor *itemcls, int damagetype, int damage, int defdamage)
 {
 	DmgFactors &df = itemcls->ActorInfo()->DamageFactors;
@@ -1741,6 +1748,27 @@ DEFINE_ACTION_FUNCTION_NATIVE(AInventory, PrintPickupMessage, PrintPickupMessage
 // Key exports
 //
 //=====================================================================================
+
+DEFINE_ACTION_FUNCTION_NATIVE(AKey, IsLockDefined, P_IsLockDefined)
+{
+	PARAM_PROLOGUE;
+	PARAM_INT(locknum);
+	ACTION_RETURN_BOOL(P_IsLockDefined(locknum));
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(AKey, GetMapColorForLock, P_GetMapColorForLock)
+{
+	PARAM_PROLOGUE;
+	PARAM_INT(locknum);
+	ACTION_RETURN_INT(P_GetMapColorForLock(locknum));
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(AKey, GetMapColorForKey, P_GetMapColorForKey)
+{
+	PARAM_PROLOGUE;
+	PARAM_OBJECT(key, AActor);
+	ACTION_RETURN_INT(P_GetMapColorForKey(key));
+}
 
 DEFINE_ACTION_FUNCTION_NATIVE(AKey, GetKeyTypeCount, P_GetKeyTypeCount)
 {
