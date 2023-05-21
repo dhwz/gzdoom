@@ -453,6 +453,8 @@ public:
 
 	void Delete (unsigned int index, int deletecount)
 	{
+        if(index >= Count) return;
+        
 		if (index + deletecount > Count)
 		{
 			deletecount = Count - index;
@@ -577,6 +579,10 @@ public:
 	unsigned int Size () const
 	{
 		return Count;
+	}
+	int SSize() const
+	{
+		return (int)Count;
 	}
 	unsigned int Max () const
 	{
