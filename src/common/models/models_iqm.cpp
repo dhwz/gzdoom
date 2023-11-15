@@ -63,12 +63,6 @@ bool IQMModel::Load(const char* path, int lumpnum, const char* buffer, int lengt
 		uint32_t num_extensions = reader.ReadUInt32();
 		uint32_t ofs_extensions = reader.ReadUInt32();
 
-		/*if (num_joints <= 0)
-		{
-			Printf("Invalid model: \"%s%s\", no joint data is present\n", path, fileSystem.GetLongName(mLumpNum).GetChars());
-			return false;
-		}*/
-
 		if (num_text == 0)
 			return false;
 
@@ -276,7 +270,7 @@ void IQMModel::LoadGeometry()
 {
 	try
 	{
-		FileData lumpdata = fileSystem.ReadFile(mLumpNum);
+		auto lumpdata = fileSystem.ReadFile(mLumpNum);
 		IQMFileReader reader(lumpdata.GetMem(), (int)lumpdata.GetSize());
 
 		Vertices.Resize(NumVertices);
@@ -451,7 +445,7 @@ int IQMModel::FindFrame(const char* name, bool nodefault)
 	return FErr_NotFound;
 }
 
-void IQMModel::RenderFrame(FModelRenderer* renderer, FGameTexture* skin, int frame1, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition)
+void IQMModel::RenderFrame(FModelRenderer* renderer, FGameTexture* skin, int frame1, int frame2, double inter, FTranslationID translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition)
 {
 	renderer->SetupFrame(this, 0, 0, NumVertices, boneData, boneStartPosition);
 

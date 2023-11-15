@@ -413,7 +413,7 @@ int getAlternative(int code)
 		case 0x41e: return 'O';
 		case 0x420: return 'P';
 		case 0x421: return 'C';
-		case 0x423: return 'T';
+		case 0x422: return 'T';
 		case 0x425: return 'X';
 		case 0x430: return 'a';
 		case 0x435: return 'e';
@@ -1155,5 +1155,19 @@ bool myisupper(int code)
 {
 	if (code >= 0 && code < 65536) return isuppermap[code];
 	return false;
+}
+
+std::wstring WideString(const char* cin)
+{
+	std::wstring buildbuffer;
+	if (cin)
+	{
+		// This is a bit tricky because we need to support both UTF-8 and legacy content in ISO-8859-1 / Windows 1252
+		// and thanks to user-side string manipulation it can be that a text mixes both.
+		// To convert the string this uses the same function as all text printing in the engine.
+		const uint8_t* in = (const uint8_t*)cin;
+		while (*in) buildbuffer.push_back((wchar_t)GetCharFromString(in));
+	}
+	return buildbuffer;
 }
 
