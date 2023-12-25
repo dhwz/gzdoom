@@ -403,7 +403,7 @@ void player_t::SetLogNumber (int num)
 		}
 
 		auto lump = fileSystem.ReadFile(lumpnum);
-		SetLogText (lump.GetString());
+		SetLogText (lump.string());
 	}
 }
 
@@ -1620,6 +1620,7 @@ void player_t::Serialize(FSerializer &arc)
 
 	if (arc.isReading())
 	{
+		userinfo.Reset(mo->Level->PlayerNum(this));
 		ReadUserInfo(arc, userinfo, skinname);
 	}
 	else

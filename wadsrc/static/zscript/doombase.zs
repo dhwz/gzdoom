@@ -545,6 +545,7 @@ struct LevelLocals native
 	native String GetEpisodeName();
 
 	native void SpawnParticle(FSpawnParticleParams p);
+	native VisualThinker SpawnVisualThinker(Class<VisualThinker> type);
 }
 
 // a few values of this need to be readable by the play code.
@@ -610,6 +611,13 @@ enum EPickStart
 	PPS_NOBLOCKINGCHECK		= 2,
 }
 
+
+enum EMissileHitResult
+{
+	MHIT_DEFAULT = -1,
+	MHIT_DESTROY = 0,
+	MHIT_PASS = 1,
+}
 
 class SectorEffect : Thinker native
 {
