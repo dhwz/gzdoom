@@ -123,8 +123,8 @@ typedef enum
 	CF_PREDICTING		= 1 << 13,		// [RH] Player movement is being predicted
 	CF_INTERPVIEW		= 1 << 14,		// [RH] view was changed outside of input, so interpolate one frame
 	CF_INTERPVIEWANGLES	= 1 << 15,		// [MR] flag for interpolating view angles without interpolating the entire frame
-	CF_SCALEDNOLERP		= 1 << 15,		// [MR] flag for applying angles changes in the ticrate without interpolating the frame
 	CF_NOFOVINTERP		= 1 << 16,		// [B] Disable FOV interpolation when instantly zooming
+	CF_SCALEDNOLERP		= 1 << 17,		// [MR] flag for applying angles changes in the ticrate without interpolating the frame
 	CF_EXTREMELYDEAD	= 1 << 22,		// [RH] Reliably let the status bar know about extreme deaths.
 	CF_BUDDHA2			= 1 << 24,		// [MC] Absolute buddha. No voodoo can kill it either.
 	CF_GODMODE2			= 1 << 25,		// [MC] Absolute godmode. No voodoo can kill it either.
@@ -324,6 +324,8 @@ public:
 	// This only represents the thrust that the player applies himself.
 	// This avoids anomalies with such things as Boom ice and conveyors.
 	DVector2 Vel = { 0,0 };
+        // Used by isometric camera (See RenderViewpoint() in src/rendering/hwrenderer/hw_entrypoint.cpp)
+        int isoyaw = 225; // degrees
 
 	bool		centering = false;
 	uint8_t		turnticks = 0;
@@ -375,6 +377,7 @@ public:
 	int			chickenPeck = 0;			// chicken peck countdown
 	int			jumpTics = 0;				// delay the next jump for a moment
 	bool		onground = 0;				// Identifies if this player is on the ground or other object
+	bool		crossingPortal = 0;			// Crossing a portal (disables sprite from showing up)
 
 	int			respawn_time = 0;			// [RH] delay respawning until this tic
 	TObjPtr<AActor*>	camera = MakeObjPtr<AActor*>(nullptr);			// [RH] Whose eyes this player sees through
