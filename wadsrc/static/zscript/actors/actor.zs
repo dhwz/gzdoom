@@ -690,6 +690,7 @@ class Actor : Thinker native
 	native clearscope static int ApplyDamageFactors(class<Inventory> itemcls, Name damagetype, int damage, int defdamage);
 	native void RemoveFromHash();
 	native void ChangeTid(int newtid);
+	native bool ActivateSpecial(Actor activator, bool death = false);
 	deprecated("3.8", "Use Level.FindUniqueTid() instead") static int FindUniqueTid(int start = 0, int limit = 0)
 	{
 		return level.FindUniqueTid(start, limit);
@@ -698,7 +699,10 @@ class Actor : Thinker native
 	native clearscope int GetRenderStyle() const;
 	native clearscope bool CheckKeys(int locknum, bool remote, bool quiet = false);
 	protected native void CheckPortalTransition(bool linked = true);
-		
+	native clearscope bool HasConversation() const;
+	native clearscope bool CanTalk() const;
+	native bool StartConversation(Actor player, bool faceTalker = true, bool saveAngle = true);
+
 	native clearscope string GetTag(string defstr = "") const;
 	native clearscope string GetCharacterName() const;
 	native void SetTag(string defstr = "");
@@ -867,7 +871,7 @@ class Actor : Thinker native
 	native bool BounceActor(Actor blocking, bool onTop);
 	native bool BounceWall(Line l = null);
 	native bool BouncePlane(readonly<SecPlane> plane, bool is3DFloor = false);
-	native void PlayBounceSound(bool onFloor);
+	native void PlayBounceSound(bool onFloor, double volume = 1.0);
 	native bool ReflectOffActor(Actor blocking);
 
 	clearscope double PitchTo(Actor target, double zOfs = 0, double targZOfs = 0, bool absolute = false) const

@@ -548,6 +548,8 @@ enum ActorBounceFlag
 	BOUNCE_BounceOnUnrips = 1<<16,	// projectile bounces on actors with DONTRIP
 	BOUNCE_NotOnSky = 1<<17,		// Don't bounce on sky floors / ceilings / walls
 	BOUNCE_DEH = 1<<18,				// Flag was set through Dehacked.
+	BOUNCE_KeepAngle = 1<<19,		// Don't change yaw when bouncing off a surface.
+	BOUNCE_ModifyPitch = 1<<20,		// Change pitch when bouncing off a surface.
 
 	BOUNCE_TypeMask = BOUNCE_Walls | BOUNCE_Floors | BOUNCE_Ceilings | BOUNCE_Actors | BOUNCE_AutoOff | BOUNCE_HereticType | BOUNCE_MBF,
 
@@ -863,7 +865,7 @@ public:
 	void Howl ();
 
 	// plays bouncing sound
-	void PlayBounceSound(bool onfloor);
+	void PlayBounceSound(bool onfloor, double volume);
 
 	// plays pushing sound
 	void PlayPushSound();
@@ -1155,7 +1157,6 @@ public:
 	double			Speed;
 	double			FloatSpeed;
 	TObjPtr<DActorModelData*>		modelData;
-	TObjPtr<DBoneComponents*>		boneComponentData;
 
 // interaction info
 	FBlockNode		*BlockNode;			// links in blocks (if needed)
