@@ -41,6 +41,8 @@
 #include "screenjob.h"
 #include "hwrenderer/postprocessing/hw_postprocess.h"
 #include "hw_viewpointuniforms.h"
+#include "vm.h"
+#include "maps.h"
 
 struct level_info_t;
 struct cluster_info_t;
@@ -102,7 +104,7 @@ struct FMapInfoParser
 
 	bool ParseLookupName(FString &dest);
 	void ParseMusic(FString &name, int &order);
-	void ParseCutscene(CutsceneDef& cdef);
+	void ParseCutscene(CutsceneDef& cdef, bool allow_function = true);
 
 	//void ParseLumpOrTextureName(char *name);
 	void ParseLumpOrTextureName(FString &name);
@@ -324,7 +326,6 @@ struct FExitText
 struct level_info_t
 {
 	int			levelnum;
-	int			broken_id24_levelnum;
 	
 	FString		MapName;
 	FString		NextMap;
@@ -536,9 +537,9 @@ int G_SkillProperty(ESkillProperty prop);
 double G_SkillProperty(EFSkillProperty prop);
 const char * G_SkillName();
 
-typedef TMap<FName, FString> SkillMenuNames;
+typedef ZSMap<FName, FString> SkillMenuNames;
 
-typedef TMap<FName, FName> SkillActorReplacement;
+typedef ZSMap<FName, FName> SkillActorReplacement;
 
 struct FSkillInfo
 {

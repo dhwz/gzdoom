@@ -446,6 +446,7 @@ enum ActorFlag9
 	MF9_NOSECTORDAMAGE			= 0x00000020,	// [inkoalawetrust] Actor ignores any sector-based damage (i.e damaging floors, NOT crushers)
 	MF9_ISPUFF					= 0x00000040,	// [AA] Set on actors by P_SpawnPuff
 	MF9_FORCESECTORDAMAGE		= 0x00000080,	// [inkoalawetrust] Actor ALWAYS takes hurt floor damage if there's any. Even if the floor doesn't have SECMF_HURTMONSTERS.
+	MF9_NOAUTOOFFSKULLFLY		= 0x00000100,	// Don't automatically disable MF_SKULLFLY if velocity is 0.
 };
 
 // --- mobj.renderflags ---
@@ -777,6 +778,18 @@ public:
 	void Serialize(FSerializer& arc) override;
 };
 
+class DBehavior final : public DObject
+{
+	DECLARE_CLASS(DBehavior, DObject)
+	HAS_OBJECT_POINTERS
+public:
+	TObjPtr<AActor*> Owner;
+	FLevelLocals* Level;
+
+	void Serialize(FSerializer& arc) override;
+	void OnDestroy() override;
+};
+
 const double MinVel = EQUAL_EPSILON;
 
 // Map Object definition.
@@ -792,6 +805,7 @@ public:
 
 	virtual void OnDestroy() override;
 	virtual void Serialize(FSerializer &arc) override;
+	virtual size_t PropagateMark() override;
 	virtual void PostSerialize() override;
 	virtual void PostBeginPlay() override;		// Called immediately before the actor's first tick
 	virtual void Tick() override;
@@ -890,7 +904,7 @@ public:
 	// Called when bouncing to allow for custom behavior.
 	// Returns -1 for normal behavior, 0 to stop, and 1 to keep going.
 	// (virtual on the script side only)
-	int SpecialBounceHit(AActor* bounceMobj, line_t* bounceLine, secplane_t* bouncePlane);
+	int SpecialBounceHit(AActor* bounceMobj, line_t* bounceLine, secplane_t* bouncePlane, bool is3DFloor);
 
 	// Returns true if it's okay to switch target to "other" after being attacked by it.
 	bool CallOkayToSwitchTarget(AActor *other);
@@ -1372,6 +1386,7 @@ public:
 	// landing speed from a jump with normal gravity (squats the player's view)
 	// (note: this is put into AActor instead of the PlayerPawn because non-players also use the value)
 	double LandingSpeed;
+	TMap<FName, TObjPtr<DBehavior*>> Behaviors;
 
 
 	// ThingIDs
@@ -1432,6 +1447,24 @@ public:
 	{
 		return GetClass()->FindState(numnames, names, exact);
 	}
+
+	DBehavior* FindBehavior(FName type) const
+	{
+		auto b = Behaviors.CheckKey(type);
+		return b != nullptr ? b->Get() : nullptr;
+	}
+	bool IsValidBehavior(const DBehavior& b) const
+	{
+		return !(b.ObjectFlags & OF_EuthanizeMe) && b.Owner.ForceGet() == this;
+	}
+	DBehavior* AddBehavior(PClass& type);
+	bool RemoveBehavior(FName type);
+	void TickBehaviors();
+	void MoveBehaviors(AActor& from);
+	void ClearBehaviors(PClass* type = nullptr);
+	// Internal only, mostly for traveling.
+	void UnlinkBehaviorsFromLevel();
+	void LinkBehaviorsToLevel();
 
 	bool HasSpecialDeathStates () const;
 

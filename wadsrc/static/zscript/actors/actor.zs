@@ -73,6 +73,25 @@ class ViewPosition native
 	native readonly int Flags;
 }
 
+class Behavior native play abstract version("4.15.1")
+{
+	native readonly Actor Owner;
+	native readonly LevelLocals Level;
+
+	virtual void Initialize() {}
+	virtual void Reinitialize() {}
+	virtual void TransferredOwner(Actor oldOwner) {}
+	virtual void Tick() {}
+}
+
+class BehaviorIterator native abstract final version("4.15.1")
+{
+	native static BehaviorIterator CreateFrom(Actor mobj, class<Behavior> type = null);
+	native static BehaviorIterator Create(class<Behavior> type = null, class<Actor> ownerType = null);
+
+	native Behavior Next();
+	native void Reinit();
+}
 
 class Actor : Thinker native
 {
@@ -268,6 +287,7 @@ class Actor : Thinker native
 
 	meta String Obituary;		// Player was killed by this actor
 	meta String HitObituary;		// Player was killed by this actor in melee
+	meta String SelfObituary;	// Player killed himself using this actor
 	meta double DeathHeight;	// Height on normal death
 	meta double BurnHeight;		// Height on burning death
 	meta int GibHealth;			// Negative health below which this monster dies an extreme death
@@ -294,6 +314,7 @@ class Actor : Thinker native
 	Property prefix: none;
 	Property Obituary: Obituary;
 	Property HitObituary: HitObituary;
+	Property SelfObituary: SelfObituary;
 	Property MeleeDamage: MeleeDamage;
 	Property MeleeSound: MeleeSound;
 	Property MissileHeight: MissileHeight;
@@ -500,6 +521,13 @@ class Actor : Thinker native
 		return sin(fb * (180./32)) * 8;
 	}
 
+	native version("4.15.1") clearscope Behavior FindBehavior(class<Behavior> type) const;
+	native version("4.15.1") bool RemoveBehavior(class<Behavior> type);
+	native version("4.15.1") Behavior AddBehavior(class<Behavior> type);
+	native version("4.15.1") void TickBehaviors();
+	native version("4.15.1") void ClearBehaviors(class<Behavior> type = null);
+	native version("4.15.1") void MoveBehaviors(Actor from);
+
 	native clearscope bool isFrozen() const;
 	virtual native void BeginPlay();
 	virtual native void Activate(Actor activator);
@@ -581,7 +609,7 @@ class Actor : Thinker native
 	}
 
 	// This is called when a missile bounces off something.
-	virtual int SpecialBounceHit(Actor bounceMobj, Line bounceLine, readonly<SecPlane> bouncePlane)
+	virtual int SpecialBounceHit(Actor bounceMobj, Line bounceLine, readonly<SecPlane> bouncePlane, bool is3DFloor = false)
 	{
 		return MHIT_DEFAULT;
 	}
@@ -666,6 +694,11 @@ class Actor : Thinker native
 			return HitObituary;
 		}
 		return Obituary;
+	}
+
+	virtual String GetSelfObituary(Actor inflictor, Name mod)
+	{
+		return SelfObituary;
 	}
 	
 	virtual int OnDrain(Actor victim, int damage, Name dmgtype)
@@ -753,6 +786,7 @@ class Actor : Thinker native
 	native bool CheckPosition(Vector2 pos, bool actorsonly = false, FCheckPosition tm = null);
 	native bool TestMobjLocation();
 	native static Actor Spawn(class<Actor> type, vector3 pos = (0,0,0), int replace = NO_REPLACE);
+	native static clearscope Actor SpawnClientside(class<Actor> type, vector3 pos = (0,0,0), int replace = NO_REPLACE);
 	native Actor SpawnMissile(Actor dest, class<Actor> type, Actor owner = null);
 	native Actor SpawnMissileXYZ(Vector3 pos, Actor dest, Class<Actor> type, bool checkspawn = true, Actor owner = null);
 	native Actor SpawnMissileZ (double z, Actor dest, class<Actor> type);
@@ -1300,9 +1334,9 @@ class Actor : Thinker native
 	native bool A_SetVisibleRotation(double anglestart = 0, double angleend = 0, double pitchstart = 0, double pitchend = 0, int flags = 0, int ptr = AAPTR_DEFAULT);
 	native void A_SetTranslation(name transname);
 	native bool A_SetSize(double newradius = -1, double newheight = -1, bool testpos = false);
-	native void A_SprayDecal(String name, double dist = 172, vector3 offset = (0, 0, 0), vector3 direction = (0, 0, 0), bool useBloodColor = false, color decalColor = 0);
+	native void A_SprayDecal(String name, double dist = 172, vector3 offset = (0, 0, 0), vector3 direction = (0, 0, 0), bool useBloodColor = false, color decalColor = 0, TranslationID translation = 0);
 	native void A_SetMugshotState(String name);
-	native void CopyBloodColor(Actor other);
+	native void CopyBloodColor(readonly<Actor> other);
 
 	native void A_RearrangePointers(int newtarget, int newmaster = AAPTR_DEFAULT, int newtracer = AAPTR_DEFAULT, int flags=0);
 	native void A_TransferPointer(int ptr_source, int ptr_recipient, int sourcefield, int recipientfield=AAPTR_DEFAULT, int flags=0);
