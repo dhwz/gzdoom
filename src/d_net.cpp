@@ -162,6 +162,14 @@ CUSTOM_CVAR(Int, cl_showchat, CHAT_GLOBAL, CVAR_ARCHIVE | CVAR_GLOBALCONFIG)
 		self = CHAT_GLOBAL;
 }
 
+CUSTOM_CVAR(Int, cl_debugprediction, 0, CVAR_CHEAT)
+{
+	if (self < 0)
+		self = 0;
+	else if (self > BACKUPTICS - 1)
+		self = BACKUPTICS - 1;
+}
+
 // Used to write out all network events that occured leading up to the next tick.
 static struct NetEventData
 {
@@ -873,6 +881,9 @@ static void GetPackets()
 				{
 					pState.CurrentSequence = seq;
 				}
+				// Update this so host switching doesn't have any hiccups in packet-server mode.
+				if (NetMode == NET_PacketServer && consoleplayer != Net_Arbitrator && pNum != Net_Arbitrator)
+					pState.SequenceAck = seq;
 			}
 		}
 	}
@@ -1409,16 +1420,31 @@ void NetUpdate(int tics)
 		curState.Flags &= ~CF_MISSING;
 
 		NetBuffer[1] = (curState.Flags & CF_RETRANSMIT_SEQ) ? curState.ResendID : CurrentLobbyID;
+		int lastSeq = curState.CurrentSequence;
+		int lastCon = curState.CurrentNetConsistency;
+		if (NetMode == NET_PacketServer && consoleplayer != Net_Arbitrator)
+		{
+			// If in packet-server mode, make sure to get the lowest sequence of all players
+			// since the host themselves might have gotten updated but someone else in the packet
+			// did not. That way the host knows to send over the correct tic.
+			for (auto cl : NetworkClients)
+			{
+				if (ClientStates[cl].CurrentSequence < lastSeq)
+					lastSeq = ClientStates[cl].CurrentSequence;
+				if (ClientStates[cl].CurrentNetConsistency < lastCon)
+					lastCon = ClientStates[cl].CurrentNetConsistency;
+			}
+		}
 		// Last sequence we got from this client.
-		NetBuffer[2] = (curState.CurrentSequence >> 24);
-		NetBuffer[3] = (curState.CurrentSequence >> 16);
-		NetBuffer[4] = (curState.CurrentSequence >> 8);
-		NetBuffer[5] = curState.CurrentSequence;
+		NetBuffer[2] = (lastSeq >> 24);
+		NetBuffer[3] = (lastSeq >> 16);
+		NetBuffer[4] = (lastSeq >> 8);
+		NetBuffer[5] = lastSeq;
 		// Last consistency we got from this client.
-		NetBuffer[6] = (curState.CurrentNetConsistency >> 24);
-		NetBuffer[7] = (curState.CurrentNetConsistency >> 16);
-		NetBuffer[8] = (curState.CurrentNetConsistency >> 8);
-		NetBuffer[9] = curState.CurrentNetConsistency;
+		NetBuffer[6] = (lastCon >> 24);
+		NetBuffer[7] = (lastCon >> 16);
+		NetBuffer[8] = (lastCon >> 8);
+		NetBuffer[9] = lastCon;
 
 		if (curState.Flags & CF_RETRANSMIT_SEQ)
 		{
@@ -1951,7 +1977,19 @@ void TryRunTics()
 	int runTics = min<int>(totalTics, availableTics);
 	if (totalTics > 0 && totalTics < availableTics - 1 && !singletics)
 		++runTics;
-	
+
+	// Test player prediction code in singleplayer
+	// by running the gametic behind the ClientTic
+	if (!netgame && !demoplayback && cl_debugprediction > 0)
+	{
+		int debugTarget = ClientTic - cl_debugprediction;
+		int debugOffset = gametic - debugTarget;
+		if (debugOffset > 0)
+		{
+			runTics = max<int>(runTics - debugOffset, 0);
+		}
+	}
+
 	// If there are no tics to run, check for possible stall conditions and new
 	// commands to predict.
 	if (runTics <= 0)
